@@ -6,6 +6,7 @@ state for the pending message queue, not part of the wire-serializable message h
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeAlias
@@ -164,3 +165,40 @@ class PendingMessage:
                 'items that form one), so the agent has a request to respond to.'
             )
         return cls(messages=messages, priority=priority)
+
+
+class PendingMessageQueue:
+    """Runtime-only synchronization for a run's pending-message list."""
+
+    def __init__(self, messages: list[PendingMessage]) -> None:
+        self.messages = messages
+        self._closed = False
+        self._lock = threading.Lock()
+
+    def append(self, pending: PendingMessage) -> None:
+        with self._lock:
+            if self._closed:
+                raise UserError('`enqueue` is not available because the agent run has ended.')
+            self.messages.append(pending)
+
+    def pop_priority(self, priority: PendingMessagePriority) -> list[PendingMessage]:
+        with self._lock:
+            return self._pop_priority(priority)
+
+    def drain_at_end(self) -> tuple[list[PendingMessage], list[PendingMessage]]:
+        """Drain both priorities, or atomically close an empty queue."""
+        with self._lock:
+            asap = self._pop_priority('asap')
+            when_idle = self._pop_priority('when_idle')
+            if not asap and not when_idle:
+                self._closed = True
+            return asap, when_idle
+
+    def close(self) -> None:
+        with self._lock:
+            self._closed = True
+
+    def _pop_priority(self, priority: PendingMessagePriority) -> list[PendingMessage]:
+        selected = [pending for pending in self.messages if pending.priority == priority]
+        self.messages[:] = [pending for pending in self.messages if pending.priority != priority]
+        return selected

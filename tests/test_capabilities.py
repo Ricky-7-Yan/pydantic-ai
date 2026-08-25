@@ -17425,6 +17425,8 @@ async def test_enqueue_from_agent_run():
 
     assert agent_run.result is not None
     assert call_count == 2  # First response triggers End, follow-up prevents it, second response is final
+    with pytest.raises(UserError, match='run has ended'):
+        agent_run.enqueue('too late')
     assert agent_run.result.all_messages() == snapshot(
         [
             ModelRequest(

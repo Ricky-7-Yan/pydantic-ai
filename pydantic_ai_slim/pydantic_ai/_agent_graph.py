@@ -432,6 +432,9 @@ class GraphAgentDeps(Generic[DepsT, OutputDataT]):
     cancellation: RunCancellation = dataclasses.field(default_factory=RunCancellation, repr=False)
     """The run's first-party cancellation controller. Runtime-only: holds a live task reference."""
 
+    pending_message_queue: _enqueue.PendingMessageQueue = dataclasses.field(repr=False)
+    """Runtime-only synchronization for `GraphAgentState.pending_messages`."""
+
     model_id: str | None = None
     """The model-id string `model` was resolved from, if the run's model came from a string.
 
@@ -2362,6 +2365,7 @@ def build_run_context(ctx: GraphRunContext[GraphAgentState, GraphAgentDeps[DepsT
         loaded_capability_ids=ctx.deps.loaded_capability_ids,
         discovered_tool_names=ctx.deps.discovered_tool_names,
         pending_messages=ctx.state.pending_messages,
+        _pending_message_queue=ctx.deps.pending_message_queue,
         _cancellation=ctx.deps.cancellation,
         _event_stream_buffer=ctx.state.event_stream_buffer,
         _mcp_tool_defs_cache=ctx.state.mcp_tool_defs_cache,
@@ -2369,7 +2373,7 @@ def build_run_context(ctx: GraphRunContext[GraphAgentState, GraphAgentDeps[DepsT
     validation_context = build_validation_context(ctx.deps.validation_context, run_context)
     # Only `validation_context` may be passed to `replace`: it shallow-copies, preserving the shared
     # identity of the mutable members passed by reference above — `loaded_capability_ids`,
-    # `discovered_tool_names`, `pending_messages`, `_cancellation`, `_event_stream_buffer`,
+    # `discovered_tool_names`, `pending_messages`, `_pending_message_queue`, `_cancellation`, `_event_stream_buffer`,
     # `_mcp_tool_defs_cache` (see the invariant on `GraphAgentDeps.loaded_capability_ids`). Never
     # add any of them as a `replace` kwarg — forking the object would silently break in-step
     # capability loads / tool reveals / message enqueues / cancellation / event delivery /

@@ -16,7 +16,7 @@ from typing_extensions import TypeVar, deprecated
 from pydantic_ai._instrumentation import DEFAULT_INSTRUMENTATION_VERSION
 
 from . import _utils, messages as _messages
-from ._enqueue import EnqueueContent, PendingMessage, PendingMessagePriority
+from ._enqueue import EnqueueContent, PendingMessage, PendingMessagePriority, PendingMessageQueue
 from ._warnings import PydanticAIDeprecationWarning
 from .exceptions import UserError
 
@@ -156,6 +156,9 @@ class RunContext(Generic[RunContextAgentDepsT]):
     Managed by the framework: read it if useful, but use [`enqueue`][pydantic_ai.tools.RunContext.enqueue]
     to add messages rather than mutating it directly.
     """
+
+    _pending_message_queue: PendingMessageQueue | None = field(default=None, repr=False)
+    """Private runtime-only synchronization shared by pending-message producers and drains."""
 
     _cancellation: RunCancellation | None = field(default=None, repr=False)
     """Private implementation detail — not part of the public API; do not read or write.
@@ -478,12 +481,12 @@ class RunContext(Generic[RunContextAgentDepsT]):
     ) -> str | None:
         """Enqueue content to be injected into the conversation.
 
-        Safe to call from anywhere a `RunContext` is available — async tools,
-        sync tools (auto-wrapped in a thread executor by Pydantic AI), and
-        capability hooks. The drain only iterates the queue between graph nodes
-        (in `before_model_request` and `after_node_run`), never concurrently
-        with the tool body, so `list.append` from a worker thread doesn't race
-        the drain.
+        During a standard agent run, this is safe to call from async tools,
+        synchronous tools running in a worker thread, and capability hooks.
+        Submission and draining are synchronized so concurrent background work
+        cannot lose a message while the agent advances between graph nodes.
+        Realtime sessions manage their own pending-message lifecycle; a retained
+        realtime context must not enqueue after its session closes.
 
         Args:
             *content: One or more [`EnqueueContent`][pydantic_ai.run.EnqueueContent] items.
@@ -510,9 +513,9 @@ class RunContext(Generic[RunContextAgentDepsT]):
             delivered, or `None` when there was nothing to enqueue (an empty call).
 
         Raises:
-            UserError: If this `RunContext` isn't backed by a running agent's queue (e.g. the
-                synthetic context from `Agent.system_prompt_parts`), since there'd be nowhere
-                to deliver the message.
+            UserError: If this `RunContext` is synthetic (e.g. from `Agent.system_prompt_parts`),
+                if its standard agent run has ended, or if called inside a durable activity,
+                task, or step. Realtime sessions manage their own pending-message lifecycle.
         """
         if self.pending_messages is None:
             raise UserError(
@@ -522,7 +525,10 @@ class RunContext(Generic[RunContextAgentDepsT]):
         pending = PendingMessage.from_content(*content, priority=priority)
         if pending is None:
             return None
-        self.pending_messages.append(pending)
+        if self._pending_message_queue is None:
+            self.pending_messages.append(pending)
+        else:
+            self._pending_message_queue.append(pending)
         return pending.enqueue_id
 
     def cancel(self) -> None:

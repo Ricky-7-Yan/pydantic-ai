@@ -663,23 +663,23 @@ you drive the run, so [`Agent.run`][pydantic_ai.agent.AbstractAgent.run],
 loop all deliver enqueued messages.
 
 !!! info "Limitations"
-    - Inside a [Temporal](durable_execution/temporal.md) workflow, tools run in
-      activities and don't share state with the workflow, so `ctx.enqueue` from a
-      tool doesn't currently propagate back to the run. Enqueue from the workflow
-      context (e.g. via `AgentRun.enqueue`) instead.
+    - Inside a durable unit, such as a [Temporal](durable_execution/temporal.md) activity,
+      [Prefect](durable_execution/prefect.md) task, or [DBOS](durable_execution/dbos.md) step,
+      `ctx.enqueue` raises because the runtime may replay the unit's recorded result without
+      re-running its code. Enqueue from workflow- or flow-level code, for example via
+      [`AgentRun.enqueue`][pydantic_ai.run.AgentRun.enqueue], instead.
     - Each end-of-run redirect opens a new model request. If something keeps
       enqueueing on every step (e.g. a tool that always enqueues, or a
       system-prompt callback that re-enqueues on each reinjection), the run will
       loop indefinitely. Set [`UsageLimits`][pydantic_ai.usage.UsageLimits] on the
       run as a safety net.
-    - `enqueue` is designed to be called from the same event loop that drives the
-      agent run. Inside the run that's automatic: async tools, sync tools (which
-      Pydantic AI auto-wraps in a thread executor), and capability hooks all
-      enqueue safely because the drain only iterates between graph nodes, never
-      concurrently with a tool body. If you're forwarding events from a *different*
-      thread or loop (e.g. a webhook handler), marshal the call onto the agent's
-      loop first — e.g. `loop.call_soon_threadsafe(agent_run.enqueue, msg)`. The
-      drain isn't atomic against concurrent cross-thread appends.
+    - [`RunContext.enqueue`][pydantic_ai.tools.RunContext.enqueue] synchronizes submissions from
+      async and sync tools, including background work, with the pending-message drain during a
+      standard agent run. A retained context rejects `enqueue` after that run ends. Realtime
+      sessions manage their own live-input queue; do not enqueue through a retained context after
+      the session closes. [`AgentRun.enqueue`][pydantic_ai.run.AgentRun.enqueue] remains designed
+      for the event loop driving the run; marshal calls from a different thread or loop onto that
+      loop, for example with `loop.call_soon_threadsafe(agent_run.enqueue, msg)`.
 
 ## Processing Message History
 
