@@ -4896,7 +4896,9 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
             return request_context
 
         messages_before = len(request_context.messages)
-        start_event = await ctx.emit_event(CompactionStartEvent(strategy='openai', message_count=messages_before))
+        start_event = await ctx.emit_event(
+            CompactionStartEvent(strategy=type(self).__name__, message_count=messages_before)
+        )
         if start_event.cancelled:
             return request_context
 
@@ -4913,7 +4915,9 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
         request_context.messages = [compacted_response, request_context.messages[-1]]
         await ctx.emit_event(
             CompactionEndEvent(
-                strategy='openai', messages_before=messages_before, messages_after=len(request_context.messages)
+                strategy=type(self).__name__,
+                messages_before=messages_before,
+                messages_after=len(request_context.messages),
             )
         )
         return request_context

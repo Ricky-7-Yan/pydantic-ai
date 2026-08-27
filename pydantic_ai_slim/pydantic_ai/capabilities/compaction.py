@@ -34,8 +34,8 @@ class CompactionStartEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE
     """
 
     strategy: str
-    """Identifies the compaction mechanism, e.g. `'openai'` for
-    [`OpenAICompaction`][pydantic_ai.models.openai.OpenAICompaction] or a Harness strategy's name."""
+    """The class name of the compacting capability or strategy, e.g. `'OpenAICompaction'` or
+    `'SummarizingCompaction'`."""
 
     message_count: int
     """The number of messages in the history about to be compacted."""

@@ -13422,9 +13422,9 @@ async def test_openai_responses_compact_emits_lifecycle_events(allow_model_reque
     compaction_events = [event for event in events if isinstance(event, CompactionStartEvent | CompactionEndEvent)]
     assert compaction_events == snapshot(
         [
-            CompactionStartEvent(capability_id='open_ai_compaction', strategy='openai', message_count=5),
+            CompactionStartEvent(capability_id='open_ai_compaction', strategy='OpenAICompaction', message_count=5),
             CompactionEndEvent(
-                capability_id='open_ai_compaction', strategy='openai', messages_before=5, messages_after=2
+                capability_id='open_ai_compaction', strategy='OpenAICompaction', messages_before=5, messages_after=2
             ),
         ]
     )
@@ -13472,7 +13472,7 @@ async def test_openai_responses_compact_start_event_cancellation(allow_model_req
         [
             CompactionStartEvent(
                 capability_id='open_ai_compaction',
-                strategy='openai',
+                strategy='OpenAICompaction',
                 message_count=5,
                 cancelled=True,
                 cancel_reason='history must stay intact',
