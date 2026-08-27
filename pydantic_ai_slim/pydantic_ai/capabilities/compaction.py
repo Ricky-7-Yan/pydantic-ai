@@ -38,7 +38,11 @@ class CompactionStartEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE
     `'SummarizingCompaction'`."""
 
     message_count: int
-    """The number of messages in the history about to be compacted."""
+    """The number of messages subject to this compaction attempt.
+
+    Emitters that compact a slice of the history (e.g. everything except the current request)
+    count that slice, not the full message list.
+    """
 
     estimated_tokens: int | None = None
     """The emitter's estimate of the current history's token size, when it has one."""
@@ -69,10 +73,11 @@ class CompactionEndEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE, 
     [`CompactionStartEvent.strategy`][pydantic_ai.capabilities.CompactionStartEvent.strategy]."""
 
     messages_before: int
-    """The number of messages in the history before compaction."""
+    """The number of messages the compaction operated on, matching
+    [`CompactionStartEvent.message_count`][pydantic_ai.capabilities.CompactionStartEvent.message_count]."""
 
     messages_after: int
-    """The number of messages in the history after compaction."""
+    """The number of messages that replaced them."""
 
     tokens_before: int | None = None
     """The history's token size before compaction, when the emitter knows it."""

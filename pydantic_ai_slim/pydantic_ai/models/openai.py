@@ -4895,17 +4895,17 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
         if len(request_context.messages) < 2:  # pragma: no cover
             return request_context
 
-        messages_before = len(request_context.messages)
+        # All messages except the last (current) request are compacted; the events count that window.
+        compact_window = request_context.messages[:-1]
         start_event = await ctx.emit_event(
-            CompactionStartEvent(strategy=type(self).__name__, message_count=messages_before)
+            CompactionStartEvent(strategy=type(self).__name__, message_count=len(compact_window))
         )
         if start_event.cancelled:
             return request_context
 
-        # Compact all messages except the last (current) request
         compact_ctx = ModelRequestContext(
             model=request_context.model,
-            messages=request_context.messages[:-1],
+            messages=compact_window,
             model_settings=request_context.model_settings,
             model_request_parameters=request_context.model_request_parameters,
         )
@@ -4916,8 +4916,8 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
         await ctx.emit_event(
             CompactionEndEvent(
                 strategy=type(self).__name__,
-                messages_before=messages_before,
-                messages_after=len(request_context.messages),
+                messages_before=len(compact_window),
+                messages_after=1,
             )
         )
         return request_context

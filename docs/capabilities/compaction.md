@@ -38,7 +38,7 @@ To compact on any model, edit the message history yourself with a [history proce
 
 ## Compaction events
 
-Compaction is a memory wipe: whatever it drops, the model can never get back. So that other capabilities and application code can react — or object — anything that compacts history client-side announces it through one shared [capability event](overview.md#capability-events) family:
+Compaction is a memory wipe: whatever it drops, the model can never get back. So that other capabilities and application code can react — or object — the compaction capabilities that run client-side announce their work through one shared [capability event](overview.md#capability-events) family (a [history processor](#model-agnostic-compaction) you write yourself doesn't emit these automatically, but it can emit the same family):
 
 - [`CompactionStartEvent`][pydantic_ai.capabilities.CompactionStartEvent] is emitted before compaction runs. It is [inline-dispatched](overview.md#reacting-to-events), and any listener may call [`cancel()`][pydantic_ai.capabilities.CompactionStartEvent.cancel] to skip this attempt — for example, a capability that is mid-activity and needs the full history intact for one more turn. Cancelling is per-attempt: the compacting capability re-attempts the next time its trigger condition is met.
 - [`CompactionEndEvent`][pydantic_ai.capabilities.CompactionEndEvent] is emitted after history was actually compacted, with before/after message counts (and token sizes, when the emitter knows them).
