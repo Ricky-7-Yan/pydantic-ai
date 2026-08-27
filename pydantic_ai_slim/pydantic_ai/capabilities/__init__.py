@@ -36,6 +36,7 @@ from .abstract import (
 )
 from .capability import Capability
 from .combined import CombinedCapability
+from .compaction import CompactionEndEvent, CompactionStartEvent
 from .content_filter import RaiseContentFilterError
 from .deferred_tool_handler import HandleDeferredToolCalls
 from .hooks import Hooks, HookTimeoutError
@@ -129,6 +130,8 @@ __all__ = [
     'RaiseContentFilterError',
     'Capability',
     'CAPABILITY_TYPES',
+    'CompactionEndEvent',
+    'CompactionStartEvent',
     'ImageGeneration',
     'Instrumentation',
     'IncludeToolReturnSchemas',

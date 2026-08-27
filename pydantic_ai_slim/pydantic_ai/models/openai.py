@@ -39,6 +39,7 @@ from .._utils import (
     number_to_datetime,
 )
 from ..capabilities.abstract import AbstractCapability
+from ..capabilities.compaction import CompactionEndEvent, CompactionStartEvent
 from ..exceptions import SuspendedResponseExpired, UserError
 from ..messages import (
     STANDING_PROMPT_PLANTED_KEY,
@@ -4752,6 +4753,11 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
 
       Requires either `message_count_threshold` or a custom `trigger` callable.
 
+      Because compaction is decided client-side in this mode, the capability emits a
+      cancellable [`CompactionStartEvent`][pydantic_ai.capabilities.CompactionStartEvent]
+      before calling the endpoint and a
+      [`CompactionEndEvent`][pydantic_ai.capabilities.CompactionEndEvent] after.
+
     If `stateless` is not set, it is inferred from which parameters you
     provide: passing any stateless-only parameter (`message_count_threshold`
     or `trigger`) implies `stateless=True`; otherwise stateful mode is used.
@@ -4889,6 +4895,11 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
         if len(request_context.messages) < 2:  # pragma: no cover
             return request_context
 
+        messages_before = len(request_context.messages)
+        start_event = await ctx.emit_event(CompactionStartEvent(strategy='openai', message_count=messages_before))
+        if start_event.cancelled:
+            return request_context
+
         # Compact all messages except the last (current) request
         compact_ctx = ModelRequestContext(
             model=request_context.model,
@@ -4900,6 +4911,11 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
 
         # Replace message history with compaction + last request
         request_context.messages = [compacted_response, request_context.messages[-1]]
+        await ctx.emit_event(
+            CompactionEndEvent(
+                strategy='openai', messages_before=messages_before, messages_after=len(request_context.messages)
+            )
+        )
         return request_context
 
     @classmethod

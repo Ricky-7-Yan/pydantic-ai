@@ -261,26 +261,17 @@ Filtering is explicit: the decorator uses `isinstance` against the classes passe
 
 Listeners run sequentially in capability order, and marked methods within one capability run in definition order. The emitting capability also receives its own events. By default, listeners run when the event reaches its position in the stream, so listener ordering always matches stream ordering and listener work does not add to the emitter's latency. For events emitted during tool execution, listeners run before the next model request. An event emitted during `before_model_request` may only reach listeners after that request begins, with the same as-soon-as-possible timing as [`ctx.enqueue()`][pydantic_ai.tools.RunContext.enqueue].
 
-Decision events that need listener mutations before the emitter continues declare `dispatch='inline'` on the event class:
+Decision events that need listener mutations before the emitter continues declare `dispatch='inline'` on the event class, with the decision fields alongside. The built-in [compaction events](compaction.md#compaction-events) are declared this way — [`CompactionStartEvent`][pydantic_ai.capabilities.CompactionStartEvent] carries `cancelled`/`cancel_reason` fields and a `cancel()` method, so any capability can hold a compaction attempt:
 
 ```python {title="cancellable_capability_event.py"}
-from dataclasses import dataclass
 from typing import Any
 
-from pydantic_ai import CapabilityEvent, RunContext
-from pydantic_ai.capabilities import AbstractCapability, on_event
-
-
-@dataclass(kw_only=True)
-class CompactionStartEvent(
-    CapabilityEvent, namespace='compaction', dispatch='inline'
-):
-    cancelled: bool = False
-    cancel_reason: str | None = None
-
-    def cancel(self, reason: str | None = None) -> None:
-        self.cancelled = True
-        self.cancel_reason = reason
+from pydantic_ai import RunContext
+from pydantic_ai.capabilities import (
+    AbstractCapability,
+    CompactionStartEvent,
+    on_event,
+)
 
 
 class KeepFullHistory(AbstractCapability[Any]):
@@ -288,10 +279,10 @@ class KeepFullHistory(AbstractCapability[Any]):
     async def _cancel(
         self, ctx: RunContext[Any], event: CompactionStartEvent
     ) -> None:
-        event.cancel()
+        event.cancel('history must stay intact')
 ```
 
-For inline dispatch, Pydantic AI buffers the event before invoking listeners. After `event = await ctx.emit_event(CompactionStartEvent())`, the emitter can inspect `event.cancelled`, and an event emitted by a listener appears after the decision event in the stream. Inline events are still delivered exactly once. Stream-dispatch listeners run inside user-defined [`wrap_run_event_stream()`][pydantic_ai.capabilities.AbstractCapability.wrap_run_event_stream] wrappers. An `on_event` listener automatically enables streaming for an otherwise non-streaming `agent.run()`.
+For inline dispatch, Pydantic AI buffers the event before invoking listeners. After `event = await ctx.emit_event(CompactionStartEvent(...))`, the emitter can inspect `event.cancelled`, and an event emitted by a listener appears after the decision event in the stream. Inline events are still delivered exactly once. Stream-dispatch listeners run inside user-defined [`wrap_run_event_stream()`][pydantic_ai.capabilities.AbstractCapability.wrap_run_event_stream] wrappers. An `on_event` listener automatically enables streaming for an otherwise non-streaming `agent.run()`.
 
 ## Provider-adaptive tools
 
