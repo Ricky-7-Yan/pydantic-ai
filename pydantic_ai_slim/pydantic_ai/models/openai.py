@@ -4897,7 +4897,7 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
 
         # All messages except the last (current) request are compacted; the events count that window.
         compact_window = request_context.messages[:-1]
-        start_event = await ctx.emit_event(
+        start_event = await ctx.emit(
             CompactionStartEvent(strategy=type(self).__name__, message_count=len(compact_window))
         )
         if start_event.cancelled:
@@ -4913,7 +4913,7 @@ class OpenAICompaction(AbstractCapability[AgentDepsT]):
 
         # Replace message history with compaction + last request
         request_context.messages = [compacted_response, request_context.messages[-1]]
-        await ctx.emit_event(
+        await ctx.emit(
             CompactionEndEvent(
                 strategy=type(self).__name__,
                 messages_before=len(compact_window),
