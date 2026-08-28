@@ -326,7 +326,7 @@ jobs:
       # otherwise be the critical-path floor of the all-extras jobs. Its `lowest` leg
       # proves the minimum `temporalio`/`dbos`/`prefect` bounds.
       - run: >-
-          uv run ${{ matrix.install.command }} coverage run -m pytest --durations=100 -n logical --dist=loadgroup
+          uv run ${{ matrix.install.command }} coverage run -m pytest --block-network --allowed-hosts=127.0.0.1,localhost,::1 --durations=100 -n logical --dist=loadgroup
           --ignore=tests/durable_exec
         env:
           COVERAGE_FILE: .coverage/.coverage.${{ matrix.python-version }}-${{ matrix.install.name }}
@@ -425,7 +425,7 @@ jobs:
       # synced above, so `--no-sync` there keeps its resolution.
       - run: >-
           uv run ${{ matrix.resolution == 'lowest' && '--no-sync' || '--all-extras --no-extra mcp-tasks' }}
-          coverage run -m pytest --durations=20 -n logical --dist=loadgroup
+          coverage run -m pytest --block-network --allowed-hosts=127.0.0.1,localhost,::1 --durations=20 -n logical --dist=loadgroup
           tests/durable_exec
         env:
           COVERAGE_FILE: .coverage/.coverage.${{ matrix.python-version }}-durable-exec-${{ matrix.resolution }}
@@ -532,7 +532,7 @@ jobs:
       # The durable-execution suites run in `test-durable-exec` (its `lowest` leg covers
       # this resolution), keeping their serial xdist chains off this job's critical path.
       - run: >-
-          uv run --no-sync coverage run -m pytest --durations=100 -n logical --dist=loadgroup
+          uv run --no-sync coverage run -m pytest --block-network --allowed-hosts=127.0.0.1,localhost,::1 --durations=100 -n logical --dist=loadgroup
           --ignore=tests/durable_exec
         env:
           COVERAGE_FILE: .coverage/.coverage.${{matrix.python-version}}-lowest-versions
@@ -637,6 +637,7 @@ jobs:
           --exclude-newer-package "mcp=2026-08-08T00:00:00Z"
           --exclude-newer-package "mcp-types=2026-08-08T00:00:00Z"
           coverage run -m pytest
+          --block-network --allowed-hosts=127.0.0.1,localhost,::1
           tests/test_mcp.py
           tests/models/test_mcp_sampling.py
         env:
