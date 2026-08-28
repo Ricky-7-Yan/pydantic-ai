@@ -222,16 +222,14 @@ def test_mutable_decision_field_serializes():
 
 def test_builtin_compaction_event_family():
     """The core compaction lifecycle events register under stable kinds shared by provider capabilities and Harness strategies."""
-    start = CompactionStartEvent(strategy='SummarizingCompaction', message_count=12, estimated_tokens=40_000)
+    start = CompactionStartEvent(strategy='summarizing', message_count=12, estimated_tokens=40_000)
     assert start.kind == 'compaction.start'
     assert type(start).event_dispatch == 'inline'
     start.cancel('a plan step is mid-flight')
     assert start.cancelled
     assert start.cancel_reason == 'a plan step is mid-flight'
 
-    end = CompactionEndEvent(
-        strategy='SummarizingCompaction', messages_before=12, messages_after=3, tokens_before=40_000
-    )
+    end = CompactionEndEvent(strategy='summarizing', messages_before=12, messages_after=3, tokens_before=40_000)
     assert end.kind == 'compaction.end'
     assert type(end).event_dispatch == 'stream'
 
@@ -243,7 +241,7 @@ def test_builtin_compaction_event_family():
             'tool_call_id': None,
             'tool_name': None,
             'event_kind': 'capability',
-            'strategy': 'SummarizingCompaction',
+            'strategy': 'summarizing',
             'messages_before': 12,
             'messages_after': 3,
             'tokens_before': 40000,

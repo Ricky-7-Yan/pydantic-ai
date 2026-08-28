@@ -34,8 +34,11 @@ class CompactionStartEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE
     """
 
     strategy: str
-    """The class name of the compacting capability or strategy, e.g. `'OpenAICompaction'` or
-    `'SummarizingCompaction'`."""
+    """A stable identifier for the compacting mechanism, e.g. `'openai'` or `'summarizing'`.
+
+    Emitters must pick an explicit identifier that is safe to persist and branch on — never a
+    Python class name, which a refactor could silently change under dashboards and stored records.
+    """
 
     message_count: int
     """The number of messages subject to this compaction attempt.
