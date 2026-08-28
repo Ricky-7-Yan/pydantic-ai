@@ -40,15 +40,15 @@ class CompactionStartEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE
     Python class name, which a refactor could silently change under dashboards and stored records.
     """
 
-    message_count: int
+    messages_before: int
     """The number of messages subject to this compaction attempt.
 
     Emitters that compact a slice of the history (e.g. everything except the current request)
     count that slice, not the full message list.
     """
 
-    estimated_tokens: int | None = None
-    """The emitter's estimate of the current history's token size, when it has one."""
+    tokens_before: int | None = None
+    """The emitter's (typically estimated) token size of the history being compacted, when it has one."""
 
     cancelled: bool = False
     """Whether a listener cancelled this compaction attempt."""
@@ -76,8 +76,7 @@ class CompactionEndEvent(CapabilityEvent, namespace=COMPACTION_EVENT_NAMESPACE, 
     [`CompactionStartEvent.strategy`][pydantic_ai.capabilities.CompactionStartEvent.strategy]."""
 
     messages_before: int
-    """The number of messages the compaction operated on, matching
-    [`CompactionStartEvent.message_count`][pydantic_ai.capabilities.CompactionStartEvent.message_count]."""
+    """The number of messages the compaction operated on."""
 
     messages_after: int
     """The number of messages that replaced them."""

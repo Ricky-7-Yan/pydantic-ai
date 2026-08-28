@@ -222,7 +222,7 @@ def test_mutable_decision_field_serializes():
 
 def test_builtin_compaction_event_family():
     """The core compaction lifecycle events register under stable kinds shared by provider capabilities and Harness strategies."""
-    start = CompactionStartEvent(strategy='summarizing', message_count=12, estimated_tokens=40_000)
+    start = CompactionStartEvent(strategy='summarizing', messages_before=12, tokens_before=40_000)
     assert start.kind == 'compaction.start'
     assert type(start).event_dispatch == 'inline'
     start.cancel('a plan step is mid-flight')
